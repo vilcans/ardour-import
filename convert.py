@@ -194,7 +194,11 @@ def main(args):
 
     tracklist = handler.top_object
     for track_number, track in enumerate(tracklist['track'], 1):
-        assert track.class_name == 'MAudioTrackEvent'
+        if track.class_name == 'MDeviceTrackEvent':
+            # TODO: investigate what MDeviceTrackEvents are
+            continue
+
+        assert track.class_name == 'MAudioTrackEvent', 'Unexpected in tracklist: ' + track.class_
 
         track_name = ('mathias', 'noise', 'sine')[track_number - 1]
         #print 'TRACK'
