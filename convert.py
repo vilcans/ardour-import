@@ -179,8 +179,8 @@ playlists = []
 diskstreams = []
 routes = []
 
-def main(args):
-    xml = sys.stdin.read()
+def main(input):
+    xml = input.read()
 
     # The XML may contain HTML entities which is invalid and makes the
     # parser fail. This fixes the problem:
@@ -200,12 +200,12 @@ def main(args):
             # TODO: investigate what MDeviceTrackEvents are
             continue
 
-        assert track.class_name == 'MAudioTrackEvent', 'Unexpected in tracklist: ' + track.class_
-
-        track_name = 'Track %s' % track_number
-        track_names.append(track_name)
+        assert track.class_name == 'MAudioTrackEvent', 'Unexpected in tracklist: ' + track.class_name
 
         node = track['Node']
+        track_name = node['Name']
+        track_names.append(track_name)
+
         timebase = node['Domain']['Type']  # 0=musical, 1=time
         sample_rate = 44100
         if timebase == 0:
@@ -249,7 +249,7 @@ def main(args):
         routes.append(route)
 
         events = node['Events']
-        for event in events:
+        for event_index, event in enumerate(events):
             assert event.class_name == 'MAudioEvent'
             #print 'EVENT'
             #dump(event, 'Start Length Offset Priority Volume')
@@ -276,6 +276,7 @@ def main(args):
 
             playlist_region = global_region.copy()
             playlist_region['id'] = next_id()
+            playlist_region['name'] = '%s %s' % (track_name, event_index + 1)
             playlist_region['position'] = timebase_to_samples(event['Start'])
             playlist['regions'].append(playlist_region)
 
@@ -299,4 +300,7 @@ def main(args):
     ).render()#'html', doctype='html')
 
 if __name__ == '__main__':
-    main(sys.argv)
+    if len(sys.argv) == 1:
+        main(sys.stdin)
+    else:
+        main(open(sys.argv[1]))
