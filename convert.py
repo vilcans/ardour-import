@@ -193,6 +193,8 @@ def main(args):
     sample_rate = 44100  # TODO: read from file
 
     tracklist = handler.top_object
+    track_names = []
+
     for track_number, track in enumerate(tracklist['track'], 1):
         if track.class_name == 'MDeviceTrackEvent':
             # TODO: investigate what MDeviceTrackEvents are
@@ -200,9 +202,9 @@ def main(args):
 
         assert track.class_name == 'MAudioTrackEvent', 'Unexpected in tracklist: ' + track.class_
 
-        track_name = ('mathias', 'noise', 'sine')[track_number - 1]
-        #print 'TRACK'
-        #dump(track, 'Flags Start Length Offset Delay')
+        track_name = 'Track %s' % track_number
+        track_names.append(track_name)
+
         node = track['Node']
         timebase = node['Domain']['Type']  # 0=musical, 1=time
         sample_rate = 44100
@@ -288,7 +290,12 @@ def main(args):
         diskstreams=diskstreams,
         routes=routes,
         id_counter=id_counter,
-        next_id=next_id
+        next_id=next_id,
+        # {mathias/out 1,noise/out 1,sine/out 1}{mathias/out 2,noise/out 2,sine/out 2}
+        master_inputs='{%s}{%s}' % (
+            ''.join('%s/out 1' % n for n in track_names),
+            ''.join('%s/out 2' % n for n in track_names),
+        )
     ).render()#'html', doctype='html')
 
 if __name__ == '__main__':
