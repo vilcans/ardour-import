@@ -1,8 +1,12 @@
 #!/usr/bin/python
 
+import sys
+import os
 from xml import sax
 import re
 import htmlentitydefs
+
+from genshi.template import TemplateLoader
 
 def debug():
     import pudb
@@ -153,20 +157,9 @@ class ContentHandler(sax.ContentHandler):
         pass
 
     def skippedEntity(self, name):
-        print 'skipped entity', name
+        pass
+        #print 'skipped entity', name
 
-with open('slatt.xml') as input:
-    xml = input.read()
-
-# The XML may contain HTML entities which is invalid and makes the
-# parser fail. This fixes the problem:
-xml = replace_html_entities(xml)
-
-#dom = minidom.parseString(xml)
-
-#parser = sax.make_parser()
-handler = ContentHandler()
-sax.parseString(xml, handler)
 
 def dump(obj, members):
     members = members.split()
@@ -174,15 +167,115 @@ def dump(obj, members):
         print m + '=' + str(obj[m]),
     print
 
-tracklist = handler.top_object
-for track in tracklist['track']:
-    assert track.class_name == 'MAudioTrackEvent'
-    dump(track, 'Flags Start Length Offset Delay')
-    node = track['Node']
-    timebase = node['Domain']['Type']  # 0=musical, 1=time
-    events = node['Events']
-    for event in events:
-        assert event.class_name == 'MAudioEvent'
-        dump(event, 'Start Length Offset Priority Volume')
-        clip = event['AudioClip'].dereference()
-        print 'clip name', clip['Name']
+id_counter = 1
+def next_id():
+    global id_counter
+    id_counter += 1
+    return id_counter
+
+sources = {}
+regions = {}
+playlists = []
+diskstreams = []
+routes = []
+
+def main(args):
+    xml = sys.stdin.read()
+
+    # The XML may contain HTML entities which is invalid and makes the
+    # parser fail. This fixes the problem:
+    xml = replace_html_entities(xml)
+
+    handler = ContentHandler()
+    sax.parseString(xml, handler)
+
+    tracklist = handler.top_object
+
+    for track_number, track in enumerate(tracklist['track'], 1):
+        assert track.class_name == 'MAudioTrackEvent'
+
+        track_name = ('mathias', 'noise', 'sine')[track_number - 1]
+        #print 'TRACK'
+        #dump(track, 'Flags Start Length Offset Delay')
+        node = track['Node']
+        timebase = node['Domain']['Type']  # 0=musical, 1=time
+
+        diskstream = {
+            'id': next_id(),
+            'name': track_name,
+            'playlist': track_name,
+        }
+        diskstreams.append(diskstream)
+
+        playlist = {
+            'name': track_name,
+            'diskstream_id': diskstream['id'],
+            'regions': [],
+        }
+        playlists.append(playlist)
+
+        route = {
+            'diskstream_id': diskstream['id'],
+            'io_name': track_name,
+            'io_id': next_id(),
+            'id1': next_id(),
+            'id2': next_id(),
+            'id3': next_id(),
+            'id4': next_id(),
+            'id5': next_id(),
+            'id6': next_id(),
+            'id7': next_id(),
+            'id8': next_id(),
+            'id9': next_id(),
+        }
+        routes.append(route)
+
+        events = node['Events']
+        for event in events:
+            assert event.class_name == 'MAudioEvent'
+            #print 'EVENT'
+            #dump(event, 'Start Length Offset Priority Volume')
+
+            clip = event['AudioClip'].dereference()
+            sources_key = event['AudioClip'].id
+            if sources_key in sources:
+                source = sources[sources_key]
+            else:
+                source = {
+                    'id': next_id(),
+                    'name': clip['Path']['Name'],
+                }
+                sources[sources_key] = source
+
+            region_id = next_id()
+            global_region = {
+                'id': region_id,
+                'name': track_name,
+                'length': int(event['Length']),
+                'source0': source['id'],
+            }
+            regions[event.id] = global_region
+
+            playlist_region = global_region.copy()
+            playlist_region['id'] = next_id()
+            playlist_region['position'] = int(event['Start'])  # convert from timebase to samples?
+            playlist['regions'].append(playlist_region)
+
+    write_result()
+
+def write_result():
+    loader = TemplateLoader(os.path.dirname(__file__))
+    tmpl = loader.load('template.ardour')
+    print tmpl.generate(
+        sources=sources.values(),
+        regions=regions.values(),
+        playlists=playlists,
+        diskstreams=diskstreams,
+        routes=routes,
+        id_counter=id_counter,
+        session_name='session',
+        next_id=lambda: 42
+    ).render()#'html', doctype='html')
+
+if __name__ == '__main__':
+    main(sys.argv)
