@@ -189,8 +189,10 @@ def main(args):
     handler = ContentHandler()
     sax.parseString(xml, handler)
 
-    tracklist = handler.top_object
 
+    sample_rate = 44100  # TODO: read from file
+
+    tracklist = handler.top_object
     for track_number, track in enumerate(tracklist['track'], 1):
         assert track.class_name == 'MAudioTrackEvent'
 
@@ -199,6 +201,16 @@ def main(args):
         #dump(track, 'Flags Start Length Offset Delay')
         node = track['Node']
         timebase = node['Domain']['Type']  # 0=musical, 1=time
+        sample_rate = 44100
+        if timebase == 0:
+            # Musical time base: positions are given in number of pulses.
+            # There are 480 pulses in one quarter note.
+            seconds_per_beat = .5  # TODO: read from file
+            def timebase_to_samples(pulses):
+                return int(pulses / 480.0 * seconds_per_beat * sample_rate)
+        else:
+            def timebase_to_samples(samples):
+                return samples * sample_rate
 
         diskstream = {
             'id': next_id(),
@@ -258,23 +270,21 @@ def main(args):
 
             playlist_region = global_region.copy()
             playlist_region['id'] = next_id()
-            playlist_region['position'] = int(event['Start'])  # convert from timebase to samples?
+            playlist_region['position'] = timebase_to_samples(event['Start'])
             playlist['regions'].append(playlist_region)
 
-    write_result()
-
-def write_result():
     loader = TemplateLoader(os.path.dirname(__file__))
     tmpl = loader.load('template.ardour')
     print tmpl.generate(
+        session_name='session',
+        sample_rate=sample_rate,  # TODO: read from file
         sources=sources.values(),
         regions=regions.values(),
         playlists=playlists,
         diskstreams=diskstreams,
         routes=routes,
         id_counter=id_counter,
-        session_name='session',
-        next_id=lambda: 42
+        next_id=next_id
     ).render()#'html', doctype='html')
 
 if __name__ == '__main__':
