@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-#from xml.dom import minidom
 from xml import sax
 import re
 import htmlentitydefs
@@ -28,33 +27,45 @@ def replace_html_entities(text):
           return text
    return re.sub("&#?\w+;", fixup, text)
 
-class Container(object):
+class Container(dict):
     """An object that contains members"""
-
-    def __init__(self):
-        self.members = {}
 
     def add_member(self, name, obj):
         if name is None:
-            print 'No name given for object', obj
             return
-        if name in self.members:
-            print name, 'already in', self.members
-            return
-        self.members[name] = obj
+        assert name not in self
+        self[name] = obj
 
 # Maps object id (int) to object
 objects = {}
 
 class Object(Container):
-    def __init__(self, id):
-        #super(Container, self).__init__()
-        self.members = {}
+    def __init__(self, class_name, id):
+        self.class_name = class_name
         self.id = id
+
+    def __repr__(self):
+        return self.id + ' ' + super(Container, self).__repr__()
 
 class ObjectReference(object):
     def __init__(self, object_id):
         self.id = object_id
+
+    def __repr__(self):
+        if self.referee:
+            return 'ref to ' + self.referee.__repr__()
+        else:
+            return 'ref to ' + self.id
+
+    @property
+    def referee(self):
+        try:
+            return self.dereference()
+        except KeyError:
+            return None
+
+    def dereference(self):
+        return objects[self.id]
 
 def new_tracklist(parent):
     return Container()
@@ -65,16 +76,15 @@ def new_bin(parent, name):
 def new_obj(parent, ID, name=None, **attrs):
     assert not attrs or 'class' in attrs, 'Class is only optional attribute: ' + str(attrs)
     if 'class' in attrs:
-        o = Object(ID)
         assert ID not in objects, 'Duplicate ID'
+        o = Object(attrs['class'], ID)
         objects[ID] = o
-        #print 'found object', ID
     else:
         o = ObjectReference(ID)
     return o
 
 def new_member(parent, name):
-    return object()
+    return Container()
 
 def new_string(parent, name, value):
     return unicode(value)
@@ -86,6 +96,7 @@ def new_float(parent, name, value):
     return float(value)
 
 def new_item(parent, value=None):
+    # TODO: should use the parent's type
     return object()
 
 class new_list(list):
@@ -132,7 +143,10 @@ class ContentHandler(sax.ContentHandler):
             self.top_object = obj
         else:
             _, parent = self.object_stack[-1]
-            if hasattr(parent, 'add_member'):
+            if not hasattr(parent, 'add_member'):
+                #print('Unexpected child element to ' + str(parent))
+                pass
+            else:
                 parent.add_member(name, obj)
 
     def characters(self, content):
@@ -154,4 +168,21 @@ xml = replace_html_entities(xml)
 handler = ContentHandler()
 sax.parseString(xml, handler)
 
-print 'top members', handler.top_object.members
+def dump(obj, members):
+    members = members.split()
+    for m in members:
+        print m + '=' + str(obj[m]),
+    print
+
+tracklist = handler.top_object
+for track in tracklist['track']:
+    assert track.class_name == 'MAudioTrackEvent'
+    dump(track, 'Flags Start Length Offset Delay')
+    node = track['Node']
+    timebase = node['Domain']['Type']  # 0=musical, 1=time
+    events = node['Events']
+    for event in events:
+        assert event.class_name == 'MAudioEvent'
+        dump(event, 'Start Length Offset Priority Volume')
+        clip = event['AudioClip'].dereference()
+        print 'clip name', clip['Name']
