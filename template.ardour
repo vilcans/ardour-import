@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Session version="2.0.0" name="${session_name}" sample-rate="${sample_rate}" id-counter="${id_counter + 100}" xmlns:py="http://genshi.edgewall.org/">
+  <Config>
+    <Option name="output-auto-connect" value="2"/>
+    <Option name="input-auto-connect" value="1"/>
+    <Option name="meter-falloff" value="32"/>
+    <end-marker-is-free val="yes"/>
+  </Config>
+  <Sources>
+    <Source py:for="s in sources" name="${s.name}" id="${s.id}" flags="Writable,CanRename,Removable,RemovableIfEmpty" channel="0"/>
+  </Sources>
+  <Regions>
+    <Region py:for="r in regions" id="${r.id}"
+            name="${r.name}"
+            start="0" length="${r.length}" position="0"
+            ancestral-start="0" ancestral-length="0" stretch="1" shift="1" first_edit="name" layer="0" sync-position="0" flags="Opaque,DefaultFadeIn,DefaultFadeOut,WholeFile,FadeIn,FadeOut,External" scale-gain="1" source-0="${r.source0}" channels="1" master-source-0="${r.source0}">
+      <FadeIn default="yes" active="yes"/>
+      <FadeOut default="yes" active="yes"/>
+      <Envelope default="yes"/>
+    </Region>
+  </Regions>
+  <DiskStreams>
+    <AudioDiskstream py:for="s in diskstreams" flags="Recordable" channels="1" playlist="${s.playlist}" speed="1" name="${s.name}" id="${s.id}"/>
+  </DiskStreams>
+  <Locations>
+    <Location id="${next_id()}" name="start" start="0" end="0" flags="IsMark,IsStart" locked="no"/>
+    <Location id="${next_id()}" name="end" start="14400000" end="14400000" flags="IsMark,IsEnd" locked="no"/>
+    <Location id="${next_id()}" name="Loop" start="0" end="14400000" flags="IsAutoLoop,IsHidden" locked="no"/>
+    <Location id="${next_id()}" name="Punch" start="0" end="14400000" flags="IsAutoPunch,IsHidden" locked="no"/>
+  </Locations>
+  <Connections/>
+  <Routes>
+    <Route flags="MasterOut" default-type="audio" muted="no" soloed="no" phase-invert="no" denormal-protection="no" mute-affects-pre-fader="yes" mute-affects-post-fader="yes" mute-affects-control-outs="yes" mute-affects-main-outs="yes" meter-point="MeterPostFader" order-keys="editor=0:signal=0">
+      <IO name="master" id="18" active="yes" inputs="master_inputs" outputs="{system:playback_1}{system:playback_2}" gain="1.000000000000" iolimits="-1,2,-1,2">
+        <Panner linked="no" link_direction="SameDirection" bypassed="no">
+          <Output x="0" y="0"/>
+          <Output x="1" y="0"/>
+          <StreamPanner x="0" type="Equal Power Stereo" muted="no">
+            <Automation>
+              <AutomationList id="59" default="0" min_yval="0" max_yval="1" max_xval="0" state="Off" style="Absolute"/>
+            </Automation>
+            <controllable name="panner" id="58"/>
+          </StreamPanner>
+          <StreamPanner x="1" type="Equal Power Stereo" muted="no">
+            <Automation>
+              <AutomationList id="62" default="1" min_yval="0" max_yval="1" max_xval="0" state="Off" style="Absolute"/>
+            </Automation>
+            <controllable name="panner" id="61"/>
+          </StreamPanner>
+        </Panner>
+        <controllable name="gaincontrol" id="19"/>
+        <Automation>
+          <AutomationList id="20" default="1" min_yval="0" max_yval="2" max_xval="0" state="Off" style="Absolute"/>
+        </Automation>
+      </IO>
+      <controllable name="solo" id="22"/>
+      <controllable name="mute" id="23"/>
+      <remote_control id="1"/>
+      <extra>
+        <GUI color="21313:32124:21857" shown_mixer="yes" height="70" shown_editor="yes">
+          <gain shown="no" height="70"/>
+          <pan shown="no" height="70"/>
+        </GUI>
+      </extra>
+    </Route>
+
+    <Route py:for="r in routes" default-type="audio" muted="no" soloed="no" phase-invert="no" denormal-protection="no" mute-affects-pre-fader="yes" mute-affects-post-fader="yes" mute-affects-control-outs="yes" mute-affects-main-outs="yes" meter-point="MeterPostFader" order-keys="editor=1:signal=1" mode="Normal" diskstream-id="${r.diskstream_id}">
+      <IO name="${r.io_name}" id="${r.io_id}" active="yes" inputs="{system:capture_2}" outputs="{master/in 1}{master/in 2}" gain="1.000000000000" iolimits="1,-1,-1,-1">
+        <Panner linked="no" link_direction="SameDirection" bypassed="no">
+          <Output x="0" y="0"/>
+          <Output x="1" y="0"/>
+          <StreamPanner x="0.5" type="Equal Power Stereo" muted="no">
+            <Automation>
+              <AutomationList id="${next_id()}" default="0.5" min_yval="0" max_yval="1" max_xval="0" state="Off" style="Absolute"/>
+            </Automation>
+            <controllable name="panner" id="${next_id()}"/>
+          </StreamPanner>
+        </Panner>
+        <controllable name="gaincontrol" id="${next_id()}"/>
+        <Automation>
+          <AutomationList id="${next_id()}" default="1" min_yval="0" max_yval="2" max_xval="0" state="Off" style="Absolute"/>
+        </Automation>
+      </IO>
+      <controllable name="solo" id="${next_id()}"/>
+      <controllable name="mute" id="${next_id()}"/>
+      <remote_control id="2"/>
+      <extra>
+        <GUI color="34814:3434:41367" height="70" shown_mixer="yes" shown_editor="yes">
+          <gain height="70" shown="no"/>
+          <pan height="70" shown="no"/>
+        </GUI>
+      </extra>
+      <alignment style="ExistingMaterial"/>
+      <controllable name="recenable" id="${next_id()}"/>
+    </Route>
+  </Routes>
+  <EditGroups/>
+  <MixGroups/>
+  <Playlists>
+    <Playlist py:for="p in playlists" name="${p.name}" orig_diskstream_id="${p.diskstream_id}" frozen="no">
+      <Region py:for="r in p.regions" id="${r.id}" name="${r.name}"
+              start="0" length="${r.length}" position="${r.position}"
+              ancestral-start="0" ancestral-length="0" stretch="1" shift="1" first_edit="id" layer="0" sync-position="0" flags="Opaque,DefaultFadeIn,DefaultFadeOut,WholeFile,FadeIn,FadeOut,External" scale-gain="1" source-0="${r.source0}" channels="1" master-source-0="${r.source0}">
+        <FadeIn default="yes" active="yes"/>
+        <FadeOut default="yes" active="yes"/>
+        <Envelope default="yes"/>
+        <extra>
+          <GUI waveform-visible="yes" envelope-visible="no" waveform-rectified="no" waveform-logscaled="no"/>
+        </extra>
+      </Region>
+    </Playlist>
+  </Playlists>
+  <UnusedPlaylists/>
+  <Click>
+    <IO name="click" id="24" active="yes" inputs="" outputs="{system:playback_1}{system:playback_2}" gain="1.000000000000" iolimits="0,0,-1,-1">
+      <Panner linked="no" link_direction="SameDirection" bypassed="no">
+        <Output x="0" y="0"/>
+        <Output x="1" y="0"/>
+        <StreamPanner x="0.5" type="Equal Power Stereo" muted="no">
+          <Automation>
+            <AutomationList id="56" default="0.5" min_yval="0" max_yval="1" max_xval="0" state="Off" style="Absolute"/>
+          </Automation>
+          <controllable name="panner" id="55"/>
+        </StreamPanner>
+      </Panner>
+      <controllable name="gaincontrol" id="25"/>
+      <Automation>
+        <AutomationList id="26" default="1" min_yval="0" max_yval="2" max_xval="0" state="Off" style="Absolute"/>
+      </Automation>
+    </IO>
+  </Click>
+  <NamedSelections/>
+  <TempoMap>
+    <Tempo start="1|1|0" beats-per-minute="120.000000" note-type="4.000000" movable="no"/>
+    <Meter start="1|1|0" note-type="4.000000" beats-per-bar="4.000000" movable="no"/>
+  </TempoMap>
+  <ControlProtocols>
+    <Protocol name="Generic MIDI" active="no"/>
+  </ControlProtocols>
+  <extra>
+    <ClockModes primary="SMPTE" secondary="BBT" preroll="MinSec" postroll="MinSec" bigclock="SMPTE" editpoint="BBT" zoomrange="SMPTE" nudge="SMPTE" sfboxLengthClock="BBT" sfboxTimecodeClock="SMPTE"/>
+    <RulerVisibility smpte="yes" bbt="yes" frames="no" minsec="no" tempo="yes" meter="yes" marker="yes" rangemarker="no" transportmarker="yes" cdmarker="yes"/>
+  </extra>
+</Session>
