@@ -250,15 +250,6 @@ def main(xml_file):
             'io_name': track_name,
             'muted': 'yes' if (track_device['Flags'] & 2) else 'no',
             'io_id': next_id(),
-            'id1': next_id(),
-            'id2': next_id(),
-            'id3': next_id(),
-            'id4': next_id(),
-            'id5': next_id(),
-            'id6': next_id(),
-            'id7': next_id(),
-            'id8': next_id(),
-            'id9': next_id(),
         }
         routes.append(route)
 
