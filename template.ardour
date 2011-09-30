@@ -64,7 +64,7 @@
       </extra>
     </Route>
 
-    <Route py:for="r in routes" default-type="audio" muted="no" soloed="no" phase-invert="no" denormal-protection="no" mute-affects-pre-fader="yes" mute-affects-post-fader="yes" mute-affects-control-outs="yes" mute-affects-main-outs="yes" meter-point="MeterPostFader" order-keys="editor=1:signal=1" mode="Normal" diskstream-id="${r.diskstream_id}">
+    <Route py:for="r in routes" default-type="audio" muted="${r.muted}" soloed="no" phase-invert="no" denormal-protection="no" mute-affects-pre-fader="yes" mute-affects-post-fader="yes" mute-affects-control-outs="yes" mute-affects-main-outs="yes" meter-point="MeterPostFader" order-keys="editor=1:signal=1" mode="Normal" diskstream-id="${r.diskstream_id}">
       <IO name="${r.io_name}" id="${r.io_id}" active="yes" inputs="{system:capture_2}" outputs="{master/in 1}{master/in 2}" gain="1.000000000000" iolimits="1,-1,-1,-1">
         <Panner linked="no" link_direction="SameDirection" bypassed="no">
           <Output x="0" y="0"/>

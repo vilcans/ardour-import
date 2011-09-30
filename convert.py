@@ -209,6 +209,8 @@ def main(xml_file):
 
         assert track.class_name == 'MAudioTrackEvent', 'Unexpected in tracklist: ' + track.class_name
 
+        track_device = track['Track Device']
+
         node = track['Node']
         track_name = node['Name']
         print 'TRACK:', track_name
@@ -246,6 +248,7 @@ def main(xml_file):
         route = {
             'diskstream_id': diskstream['id'],
             'io_name': track_name,
+            'muted': 'yes' if (track_device['Flags'] & 2) else 'no',
             'io_id': next_id(),
             'id1': next_id(),
             'id2': next_id(),
