@@ -2,6 +2,7 @@
 
 import sys
 import os
+import shutil
 from xml import sax
 import re
 import htmlentitydefs
@@ -179,8 +180,13 @@ playlists = []
 diskstreams = []
 routes = []
 
-def main(input):
-    xml = input.read()
+def main(xml_file):
+    source_dir, source_file = os.path.split(xml_file)
+    media_dir = os.path.join(source_dir, 'Media')
+    project_name, _ = os.path.splitext(source_file)
+
+    with open(xml_file) as input:
+        xml = input.read()
 
     # The XML may contain HTML entities which is invalid and makes the
     # parser fail. This fixes the problem:
@@ -198,12 +204,17 @@ def main(input):
     for track_number, track in enumerate(tracklist['track'], 1):
         if track.class_name == 'MDeviceTrackEvent':
             # TODO: investigate what MDeviceTrackEvents are
+            print 'IGNORING MDeviceTrackEvents'
             continue
 
         assert track.class_name == 'MAudioTrackEvent', 'Unexpected in tracklist: ' + track.class_name
 
         node = track['Node']
         track_name = node['Name']
+        print 'TRACK:', track_name
+        while track_name in track_names:
+            print 'Warning: duplicated track name %s' % track_name
+            track_name += '-' + str(track_number)
         track_names.append(track_name)
 
         timebase = node['Domain']['Type']  # 0=musical, 1=time
@@ -251,8 +262,8 @@ def main(input):
         events = node['Events']
         for event_index, event in enumerate(events):
             assert event.class_name == 'MAudioEvent'
-            #print 'EVENT'
-            #dump(event, 'Start Length Offset Priority Volume')
+            print 'EVENT'
+            dump(event, 'Start Length Offset Priority Volume')
 
             clip = event['AudioClip'].dereference()
             sources_key = event['AudioClip'].id
@@ -270,6 +281,7 @@ def main(input):
                 'id': region_id,
                 'name': track_name,
                 'length': int(event['Length']),
+                'start': 0,
                 'source0': source['id'],
             }
             regions[event.id] = global_region
@@ -278,11 +290,24 @@ def main(input):
             playlist_region['id'] = next_id()
             playlist_region['name'] = '%s %s' % (track_name, event_index + 1)
             playlist_region['position'] = timebase_to_samples(event['Start'])
+            playlist_region['start'] = int(event['Offset'])
+            playlist_region['flags'] = 'Opaque,DefaultFadeIn,DefaultFadeOut,WholeFile,FadeIn,FadeOut,External'
+            if event['Flags'] & 2:
+                playlist_region['flags'] = 'Muted,' + playlist_region['flags']
+
             playlist['regions'].append(playlist_region)
+            print 'creating playlist region', playlist_region
+
+    output_dir = project_name
+    if os.path.exists(output_dir):
+        print "Can't create directory %s: Already exists" % output_dir
+        sys.exit(1)
+    audio_dir = os.path.join(output_dir, 'interchange', 'session', 'audiofiles')
+    os.makedirs(audio_dir)
 
     loader = TemplateLoader(os.path.dirname(__file__))
     tmpl = loader.load('template.ardour')
-    print tmpl.generate(
+    ardour_file = tmpl.generate(
         session_name='session',
         sample_rate=sample_rate,  # TODO: read from file
         sources=sources.values(),
@@ -297,10 +322,19 @@ def main(input):
             ''.join('%s/out 1' % n for n in track_names),
             ''.join('%s/out 2' % n for n in track_names),
         )
-    ).render()#'html', doctype='html')
+    ).render()
+    
+    with open(os.path.join(project_name, project_name + '.ardour'), 'w') as s:
+        s.write(ardour_file)
+
+    for source in sources.values():
+        source_file = os.path.join(media_dir, source['name'])
+        print 'copying', source_file
+        shutil.copy(source_file, audio_dir)
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        main(sys.stdin)
+    if len(sys.argv) != 2:
+        print 'Usage: convert.py <xml-file>'
+        sys.exit(2)
     else:
-        main(open(sys.argv[1]))
+        main(sys.argv[1])

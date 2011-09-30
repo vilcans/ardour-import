@@ -12,7 +12,7 @@
   <Regions>
     <Region py:for="r in regions" id="${r.id}"
             name="${r.name}"
-            start="0" length="${r.length}" position="0"
+            start="${r.start}" length="${r.length}" position="0"
             ancestral-start="0" ancestral-length="0" stretch="1" shift="1" first_edit="name" layer="0" sync-position="0" flags="Opaque,DefaultFadeIn,DefaultFadeOut,WholeFile,FadeIn,FadeOut,External" scale-gain="1" source-0="${r.source0}" channels="1" master-source-0="${r.source0}">
       <FadeIn default="yes" active="yes"/>
       <FadeOut default="yes" active="yes"/>
@@ -99,8 +99,8 @@
   <Playlists>
     <Playlist py:for="p in playlists" name="${p.name}" orig_diskstream_id="${p.diskstream_id}" frozen="no">
       <Region py:for="r in p.regions" id="${r.id}" name="${r.name}"
-              start="0" length="${r.length}" position="${r.position}"
-              ancestral-start="0" ancestral-length="0" stretch="1" shift="1" first_edit="id" layer="0" sync-position="0" flags="Opaque,DefaultFadeIn,DefaultFadeOut,WholeFile,FadeIn,FadeOut,External" scale-gain="1" source-0="${r.source0}" channels="1" master-source-0="${r.source0}">
+              start="${r.start}" length="${r.length}" position="${r.position}"
+              ancestral-start="0" ancestral-length="0" stretch="1" shift="1" first_edit="id" layer="0" sync-position="0" flags="${r.flags}" scale-gain="1" source-0="${r.source0}" channels="1" master-source-0="${r.source0}">
         <FadeIn default="yes" active="yes"/>
         <FadeOut default="yes" active="yes"/>
         <Envelope default="yes"/>
